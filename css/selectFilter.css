@@ -1,0 +1,230 @@
+/**
+ * selectFilter  --v1.0
+ * 
+ **/
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+li {
+	list-style: none;
+}
+
+.filter-disabled {
+	-moz-user-select: none;
+    -webkit-user-select: none;
+    -ms-user-select: none;
+}
+
+.filter-box {
+    position: relative;
+    width: 260px;
+}
+
+.filter-box select {
+	display: none;
+}
+
+.filter-text {
+	height: 100%;
+	overflow: hidden;
+	position: relative;
+	cursor: pointer;
+	padding: 0 30px 0 10px;
+	background: #fff;
+	border: 1px solid #e6e6e6;
+}
+
+.filter-text input {
+	font-size: 14px;
+}
+
+.filter-text .filter-title {
+	width: 100%;
+	height: 36px;
+	line-height: 36px;
+	border: 0;
+	background-color: transparent;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	padding: 0;
+	cursor: pointer;
+}
+
+.filter-list {
+	display: none;
+	width: 100%;
+	max-height: 300px;
+	background-color: #fff;
+	font-size: 14px;
+	position: absolute;
+	top: 42px;
+	left: 0;
+	z-index: 99;
+	border: 1px solid #e6e6e6;
+	overflow: auto;
+}
+
+.filter-list li.filter-null a {
+	color: #d2d2d2;
+}
+
+.filter-list li a {
+	display: block;
+	padding: 0 10px;
+	line-height: 36px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	cursor: pointer;
+}
+
+.filter-list li:hover {
+	background-color: #f2f2f2;
+}
+
+.filter-list li.filter-selected {
+	background-color: #42A5F5;
+}
+
+.filter-list li.filter-selected a{
+	display: block;
+	color: #fff;
+}
+
+.filter-list li.filter-disabled {
+	background-color: #fff;
+}
+
+.filter-list li.filter-disabled a{
+	display: block;
+	color: #d2d2d2;
+}
+
+.filter-list li.filter-disabled:hover a {
+	cursor: not-allowed!important;
+	background-color: #fff;
+}
+
+.icon {
+	position: absolute;
+}
+
+.icon-filter-arrow {
+	width: 8px;
+	height: 6px;
+	background-repeat: no-repeat;
+    background-image: url(../img/icon_arrow_down_x2.png);
+    background-size: 100%;
+    right: 10px;
+    top: 13px;
+    transition: all .2s;
+}
+
+.icon-filter-arrow.filter-show {
+	-webkit-transform: rotate(-180deg);
+	transform: rotate(-180deg);
+}
+
+.filter-list::-webkit-scrollbar {
+	width: 4px;
+	height: 4px;
+}
+
+.filter-list::-webkit-scrollbar-track {
+	background: #fff 
+}
+
+.filter-list::-webkit-scrollbar-thumb {
+	background: #CBCBCB;
+}
+.dw-btn {
+  float: right;
+  margin-top: -38px;
+  cursor: pointer;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  padding: 9px 32px;
+  display: inline-block;
+  vertical-align: middle;
+  *vertical-align: auto;
+  *zoom: 1;
+  *display: inline;
+}
+.dw-btn.has-hover:hover {
+  background: #e1e1e1;
+}
+.dw-btn.btn-primary {
+  -moz-box-sizing: border-box;
+  -webkit-box-sizing: border-box;
+  box-sizing: border-box;
+  background: #42A5F5;
+  color: #ffffff;
+  -moz-border-radius: 4px;
+  -webkit-border-radius: 4px;
+  border-radius: 2px;
+}
+.dw-btn.btn-primary.has-hover:hover {
+  background: #4684C3;
+}
+
+
+
+
+
+.loader1 {
+   margin-top: 25%;
+   margin-left: 45%;
+   position: absolute;
+   z-index: 99;
+   display: none;
+}
+.loader1 span {
+   vertical-align:middle;
+   border-radius:100%;
+   display:inline-block;
+   width:10px;
+   height:10px;
+   margin:3px 2px;
+   -webkit-animation:loader1 0.8s linear infinite alternate;
+   animation:loader1 0.8s linear infinite alternate;
+}
+.loader1 span:nth-child(1) {
+   -webkit-animation-delay:-1s;
+   animation-delay:-1s;
+   background:rgba(245, 103, 115,0.6);
+}
+.loader1 span:nth-child(2) {
+   -webkit-animation-delay:-0.8s;
+   animation-delay:-0.8s;
+   background:rgba(245, 103, 115,0.8);
+}
+.loader1 span:nth-child(3) {
+   -webkit-animation-delay:-0.26666s;
+   animation-delay:-0.26666s;
+   background:rgba(245, 103, 115,1);
+}
+.loader1 span:nth-child(4) {
+   -webkit-animation-delay:-0.8s;
+   animation-delay:-0.8s;
+   background:rgba(245, 103, 115,0.8);
+  
+}
+.loader1 span:nth-child(5) {
+   -webkit-animation-delay:-1s;
+   animation-delay:-1s;
+   background:rgba(245, 103, 115,0.4);
+}
+
+@keyframes loader1 {
+   from {transform: scale(0, 0);}
+   to {transform: scale(1, 1);}
+}
+@-webkit-keyframes loader1 {
+   from {-webkit-transform: scale(0, 0);}
+   to {-webkit-transform: scale(1, 1);}
+}

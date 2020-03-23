@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title></title>
+		<link rel="stylesheet" href="css/map.css" />
+		<link rel="stylesheet" href="css/selectFilter.css" />
+		<script language="javascript" src="http://webapi.amap.com/maps?v=1.4.9&key=ed1ec4b5755384dc0a3c4552b8d5528f&plugin=AMap.ControlBar"></script>
+		<script src="js/jquery-1.9.0.min.js"></script>
+		<script type="text/javascript" src="layer/layer.js" ></script>
+		<script type="text/javascript" src="js/selectFilter.js" ></script>
+		<style>
+			body,html{ 
+				margin:0;
+				padding:0;
+				width: 100%;
+				height: 100%;
+			}
+			#container{
+				width:100%; 
+				height:100%;
+				resize:both;
+				z-index: 1;
+			}
+			.item {
+				width: 355px;
+				height: 32px;
+				margin: 60px 100px;
+				z-index: 2;
+				position: absolute;
+			}
+			
+		</style>
+	</head>
+	<body>
+		
+		<div class="item">
+			<div class="filter-box">
+				<div class="filter-text">
+					<input class="filter-title" type="text" readonly placeholder="请选择" />
+					<i class="icon icon-filter-arrow"></i>
+				</div>
+				<select name="filter" id="proje">
+					<option value="中科洛丁展示项目1">洛丁展厅</option>
+					<option value="中科洛丁展示项目2">中科院</option>
+					<option value="茅以升大道工程">茅以升大道</option>
+					<option value="彝良工程">彝良</option>
+					<option value="铜川">铜川</option>
+					<option value="312国道工程">312国道</option>
+					<option value="镇荣公路工程">镇荣公路</option>
+					<option value="长山安置小区工程">安置房小区</option>
+				</select>
+			</div>
+			<button class="dw-btn btn-primary has-hover" onclick="getLdInfo()">搜索</button>
+		</div>
+		<div class="loader1">
+			<span></span>
+			<span></span>
+			<span></span>
+			<span></span>
+			<span></span>
+		</div>
+  		<div id="container"></div>
+  
+		<script type="text/javascript">
+			$('.filter-box').selectFilter({
+				callBack : function (val){
+					//console.log(val+'-是返回的值')
+				}
+			});
+			
+			var icon_0='img/0.png',
+				icon_10='img/10.png',
+				icon_20='img/20.png',
+				icon_30='img/30.png',
+				icon_40='img/40.png',
+				icon_50='img/50.png',
+				icon_60='img/60.png',
+				icon_70='img/70.png',
+				icon_80='img/80.png',
+				icon_90='img/90.png',
+				icon_100='img/100.png',
+				icon_eletbox='img/eletbox.png',
+				icon_light='img/light.png',
+				icon_control='img/control.png',
+				icon_loading='img/loading.gif';
+			var marks = new Array(); //存放路灯对象的数组
+			var marks_box = new Array(); //存放电箱对象的数组
+			var isMarker=true,//判断是否缩放到指定级别，需要移除坐标保留一个
+				lng,lat,//保存单个点的经纬度
+				num1=0,num2=0;//路灯和电箱数量
+		    //初始化地图对象，加载地图
+		    var map = new AMap.Map('container', {
+			    zoom:17,
+			    //mapStyle:'amap://styles/darkblue',
+			    center:[114.010287,22.627583]
+			});
+		    //地图控件 
+		    map.plugin(["AMap.MapType","AMap.ToolBar"],function(){
+				map.addControl(new AMap.MapType({
+				    defaultType:0 //使用2D地图
+				}));
+				map.addControl(new AMap.ToolBar());
+			})
+		    
+		    function mapZoomend(){
+		    	var zoom=map.getZoom();
+		    	if(zoom<13){
+		    		map.remove(marks);
+		    		map.remove(marks_box);
+		    		isMarker=false;
+		    		
+		    		var marker=new AMap.Marker({
+			            map: map,
+			            icon: icon_light,
+			            position: [lng, lat],
+			            offset: new AMap.Pixel(-12, -36)
+			        });
+			        marker.setLabel({
+				        offset: new AMap.Pixel(-70, -18),//修改label相对于maker的位置
+				        content: $("#proje").find("option:selected").text()+'--路灯：'+num1+'，电箱：'+num2
+				    });
+		    	}else{
+		    		if(isMarker==false){
+		    			getLdInfo();
+		    			isMarker=true;
+		    		}
+		    	}
+		    }
+		     
+		    function getLdInfo(){
+		    	//console.log(isMarker)
+		    	map.clearMap();  // 清除地图覆盖物
+				layer.closeAll();
+				
+		    	var flag=$("#proje").val(),flag1;
+		    	if(flag=="中科洛丁展示项目1"||flag=="中科洛丁展示项目2"){
+		    		flag1="中科洛丁展示项目";
+		    	}else{
+		    		flag1=flag;
+		    	}
+					
+		    	$.ajax({ 
+					type: "POST",
+					url: "http://47.99.168.98:9002/API/QueryDevice.asmx/QueryDeviceDimming",   
+					dataType: "json",
+					async: true,
+					data:{
+						ProjectName:flag1
+					},
+					beforeSend:function(XMLHttpRequest){ 
+						$(".loader1").show();
+					}, 
+					success: function (data) { 
+						console.log(data)
+						
+						$(".loader1").hide();
+						if(data.b){
+							if(data.data.length>0){
+								if(flag=="中科洛丁展示项目1"){
+									showLdInfo(data.data[0].Light.slice(4),data.data[0].ElectricBox.slice(0,1),"ld1");
+								}else if(flag=="中科洛丁展示项目2"){
+									showLdInfo(data.data[1].Light.slice(0,15),data.data[1].ElectricBox,"ld2");
+								}else if(flag=="312国道工程"){
+									showLdInfo(data.data[0].Light,data.data[0].ElectricBox,"312");
+								}else{
+									showLdInfo(data.data[0].Light,data.data[0].ElectricBox);
+								}
+							}else{
+								layer.msg("暂无电箱和路灯数据");
+							}
+							
+						}else{
+							layer.msg(data.msg);
+						}
+					},
+					error:function(){
+						console.log("error");
+						layer.msg("网络超时，请重试！");
+						$(".loader1").hide();
+					}
+				})
+		    }
+		   
+		   //地图缩放事件
+		   map.on('zoomend', mapZoomend);
+		   
+		   //处理数据,传参路灯数据和电箱数据
+		   function showLdInfo(Lightdata,ElectricBox,flag){
+		   		//设置地图中心点和层级
+		   		var len;
+		   		if(Lightdata.length>0){
+		   			len=(Lightdata.length%2==0) ? Lightdata.length/2 : ((Lightdata.length-1)/2);
+		   			lng=Lightdata[len].LNG;
+					lat=Lightdata[len].LAT;
+		   		}else{
+		   			len=(ElectricBox.length%2==0) ? ElectricBox.length/2 : ((ElectricBox.length-1)/2);
+		   			lng=ElectricBox[len].LNG;
+					lat=ElectricBox[len].LAT;
+		   		}
+				if(isMarker){
+					map.setZoomAndCenter(17, [lng, lat]); //同时设置地图层级与中心点 
+				}else{
+					if(map.getZoom()<13){
+						map.setZoomAndCenter(17, [lng, lat]);
+					}
+				}
+				
+				//在地图上显示点
+		   		if(Lightdata.length>0){
+		   			num1=Lightdata.length;//路灯数量
+					for(var i=0;i<Lightdata.length;i++){
+						var icon=icon_0,time1;
+						if(Lightdata[i].TimeDifference==1){//12小时之内的数据
+							time1="最新数据";
+							if(Lightdata[i].FirDimming<10||Lightdata[i].FirDimming==null){
+								icon=icon_0;
+								console.log(0);
+							}else if(Lightdata[i].FirDimming==10){
+								icon=icon_10;
+								console.log(10);
+							}else if(Lightdata[i].FirDimming==20){
+								icon=icon_20;
+								console.log(20);
+							}else if(Lightdata[i].FirDimming==30){
+								icon=icon_30;
+								console.log(30);
+							}else if(Lightdata[i].FirDimming==40){
+								icon=icon_40;
+								console.log(40);
+							}else if(Lightdata[i].FirDimming==50){
+								icon=icon_50;
+								console.log(50);
+							}else if(Lightdata[i].FirDimming==60){
+								icon=icon_60;
+								console.log(60);
+							}else if(Lightdata[i].FirDimming==70){
+								icon=icon_70;
+								console.log(70);
+							}else if(Lightdata[i].FirDimming==80){
+								icon=icon_80;
+								console.log(80);
+							}else if(Lightdata[i].FirDimming==90){
+								icon=icon_90;
+								console.log(90);
+							}else if(Lightdata[i].FirDimming==100){
+								icon=icon_100;
+								console.log(100);
+							}
+						}else{
+							time1="数据未更新";
+							icon=icon_loading;
+						}
+						var title1=Lightdata[i].NAME+"("+time1+")";
+						var marker1=new AMap.Marker({
+				            map: map,
+				            icon: icon,
+				            position: [Lightdata[i].LNG, Lightdata[i].LAT],
+				            offset: new AMap.Pixel(-12, -36)
+				        });
+				        marker1.setTitle(title1);
+				        marks.push(marker1);
+					}
+				}else{
+					num1=0;
+					layer.msg("暂无路灯数据");
+				}
+				
+				if(ElectricBox.length>0){
+					num2=ElectricBox.length;//电箱数量
+					for(var j=0;j<ElectricBox.length;j++){
+						//电箱
+						var title2=ElectricBox[j].NAME;
+						var marker2=new AMap.Marker({
+				            map: map,
+				            icon: icon_eletbox,
+				            position: [ElectricBox[j].LNG, ElectricBox[j].LAT],
+				            offset: new AMap.Pixel(-12, -36)
+				        });
+				        marker2.setTitle(title2);
+				        marks_box.push(marker2);
+				        
+				        var controlId;
+				    	if(flag=="ld1"){
+				    		controlId=1;
+				    		AMap.event.addListener(marker2, 'click', function() {
+					    		var marker_control=new AMap.Marker({
+						            map: map,
+						            icon: icon_control,
+						            position: [114.003394,22.635881],
+						            offset: new AMap.Pixel(-12, -36)
+						        });
+				    			showControlWindow(marker_control,controlId);
+					        })
+				    		
+				    	}else if(flag=="ld2"){
+				    		controlId=2;
+				    		AMap.event.addListener(marker2, 'click', function() {
+					    		var marker_control=new AMap.Marker({
+						            map: map,
+						            icon: icon_control,
+						            position: [106.541135, 29.803865],
+						            offset: new AMap.Pixel(-12, -36)
+						        });
+						        showControlWindow(marker_control,controlId);
+					        })
+				    	}else if(flag=="312"){
+				    		$.each(marks_box, function(i,marker) {
+								AMap.event.addListener(marker, 'click', function() {
+					    			var content="开关：<input type=\"checkbox\" id=\"inset_3\" disabled><label for=\"inset_3\" class=\"green\"></label><br>"+
+					    						"主灯亮度值：<span class=\"fir_0\" style=\"width:23px;display:inline-block;\">0</span><input type=\"range\" step=\"10\" class=\"range\" disabled>";
+					    			var title=marker.getTitle()+"控灯";
+					    			
+					    			infoWindow=new AMap.InfoWindow({
+								        isCustom: true,  //使用自定义窗体
+								        content: createInfoWindow(title, content),
+								        offset: new AMap.Pixel(20, -58)
+								    }); 
+								    
+					    			infoWindow.open(map, marker.getPosition());
+					    		})
+							});
+				    	}
+					}
+				}else{
+					num2=0;
+					layer.msg("暂无电箱数据");
+				}
+		   }
+		   
+		   
+		   //控灯页面
+		   function showControlWindow (marker,controlId) {
+		   		var controlTitle;//页面标题
+		   		if(controlId==1){
+		   			controlTitle="洛丁光电展厅";
+		   		}else if(controlId==2){
+		   			controlTitle="重庆中科院展厅";
+		   		}
+		   		
+		   		AMap.event.addListener(marker, 'click', function() {
+		   			layer.open({
+					  type: 2,
+					  title: controlTitle+'控灯页面',
+					  shade: false,
+					  shadeClose: true,
+					  maxmin: true, //开启最大化最小化按钮
+					  area: ['900px', '600px'],
+					  anim: 2,
+					  content: 'map.html?Id='+controlId //iframe的url，no代表不显示滚动条
+					});
+		   		})
+		   }
+		   
+		   //构建自定义信息窗体
+		    function createInfoWindow(title, content) {
+		        var info = document.createElement("div");
+		        info.className = "info";
+		
+		        //可以通过下面的方式修改自定义窗体的宽高
+		        info.style.width = "213px";
+		        // 定义顶部标题
+		        var top = document.createElement("div");
+		        var titleD = document.createElement("div");
+		        var closeX = document.createElement("img");
+		        top.className = "info-top";
+		        titleD.innerHTML = title;
+		        closeX.src = "https://webapi.amap.com/images/close2.gif";
+		        closeX.onclick = closeInfoWindow;
+		
+		        top.appendChild(titleD);
+		        top.appendChild(closeX);
+		        info.appendChild(top);
+		
+		        // 定义中部内容
+		        var middle = document.createElement("div");
+		        middle.className = "info-middle";
+		        middle.style.backgroundColor = 'white';
+		        middle.innerHTML = content;
+		        info.appendChild(middle);
+		
+		        // 定义底部内容
+		        var bottom = document.createElement("div");
+		        bottom.className = "info-bottom";
+		        bottom.style.position = 'relative';
+		        bottom.style.top = '0px';
+		        bottom.style.margin = '0 auto';
+		        var sharp = document.createElement("img");
+		        sharp.src = "https://webapi.amap.com/images/sharp.png";
+		        bottom.appendChild(sharp);
+		        info.appendChild(bottom);
+		        return info;
+		    }
+		    
+		    //关闭信息窗体
+		    function closeInfoWindow() {
+		        map.clearInfoWindow();
+		    }
+		</script>
+	</body>
+</html>

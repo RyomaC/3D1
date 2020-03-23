@@ -1,0 +1,992 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+<meta name="viewport" content="width=device-width initial-scale=1.0 maximum-scale=1.0 user-scalable=0">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<title>3D地图</title>
+<link rel="stylesheet" href="css/map.css" />
+<script language="javascript" src="http://webapi.amap.com/maps?v=1.4.9&key=ed1ec4b5755384dc0a3c4552b8d5528f&plugin=AMap.ControlBar"></script>
+<script src="js/jquery-1.9.0.min.js"></script>
+<script type="text/javascript" src="layer/layer.js" ></script>
+
+</head>
+<body >
+	<div id="container" style="width:100%; height:100%;resize:both;"></div>
+
+
+	<script language="javascript">
+	var map;
+	var markers=[];//所有点集合
+	var marks = new Array(); //存放标注点对象的数组
+	var infoWindow,checkedname,checkedobj;//信息框标题、对象、内容；选中的对象
+	var num=0,num1=new Array();//判断是否有路灯状态改变，改变num赋值为第num个路灯;num1[0]保存最新次要更新的灯的id
+	var icon_0='img/0.png',
+		icon_10='img/10.png',
+		icon_20='img/20.png',
+		icon_30='img/30.png',
+		icon_40='img/40.png',
+		icon_50='img/50.png',
+		icon_60='img/60.png',
+		icon_70='img/70.png',
+		icon_80='img/80.png',
+		icon_90='img/90.png',
+		icon_100='img/100.png';
+	var ldInfo="",ldInfo1=[];//ldInfo保存所有路灯信息，ldInfo1保存单条更改状态之后的路灯信息
+	//保存路灯属性:电压、电流、功率、亮度值、是否亮、亮度值对应图片
+	var title=[],Voltage=[],Current=[],Power=[],FirDimming=[],Flag=[],Img=[],uuid=[];
+	var loginKey = null;
+	var iSessionKey = 0,uuidTo='';
+	var uuidFrom='1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1';
+	var uuidTo1='77,99,99,99,99,99,99,99,99,99,99,99,99,99,99,99';
+	var uuidTo2='88,99,99,99,99,99,99,99,99,99,99,99,99,99,99,99';
+	
+	
+	map = new AMap.Map('container', {
+	    resizeEnable: false,//是否监控地图容器尺寸变化
+	    rotateEnable:true,//是否旋转
+	    pitchEnable:true,//是否倾斜
+	    zoom: 17,
+	    pitch:80,//倾角，0-83
+	    rotation:-15,//旋转角度
+	    viewMode:'3D',//开启3D视图,默认为关闭
+	    buildingAnimation:true,//楼块出现是否带动画
+	    showBuildingBlock:false,//是否显示建筑立体效果
+	    expandZoomRange:false,//expandZoomRange为 true时,zooms的最大级别在PC上可以扩大到20级
+	    zooms:[3,20],
+	    //mapStyle:'amap://styles/darkblue',
+	    center:[114.010287,22.627583]
+	});
+	
+	//地图控件  
+	map.addControl(new AMap.ControlBar({
+	    showZoomBar:false,
+	    showControlButton:true,
+	    position:{
+	      right:'10px',
+	      top:'10px'
+	    }
+	}))
+	
+	//所有点集合--洛丁
+	var markers_1 = [{
+        position: [114.013313,22.623948]
+    }, {
+        position: [114.012717,22.625059]
+    }, {
+        position: [114.011934,22.626118]
+    }, {
+        position: [114.011344,22.626940]
+    }, {
+        position: [114.010829,22.627703]
+    }, {
+        position: [114.010368,22.628347]
+    }, {
+        position: [114.00981,22.62907]
+    }, {
+        position: [114.009284,22.629921]
+    }, {
+        position: [114.008683,22.630812]
+    }, {
+        position: [114.008093,22.631618]
+    }, {
+        position: [114.012192,22.623606]
+    }, {
+        position: [114.011596,22.624608]
+    }, {
+        position: [114.010952,22.625628]
+    }, {
+        position: [114.010319,22.626470]
+    }, {
+        position: [114.009794,22.627272]
+    }, {
+        position: [114.009365,22.627906]
+    }, {
+        position: [114.008807,22.628679]
+    }, {
+        position: [114.008216,22.629461]
+    }, {
+        position: [114.007497,22.630352]
+    }, {
+        position: [114.006918,22.631177]
+    }];
+    
+    //所有点集合--中科院
+    var markers_2 = [{
+        position: [106.543021,29.805277]
+    },{
+        position: [106.542705,29.805161]
+    },{
+        position: [106.542426,29.805067]
+    },{
+        position: [106.542094,29.804955]
+    },{
+        position: [106.541728,29.804825]
+    },{
+        position: [106.54146,29.8047475]
+    },{
+        position: [106.541165,29.804649]
+    },{
+        position: [106.54086,29.804546]
+    },{
+        position: [106.543149,29.805002]
+    },{
+        position: [106.54279,29.804886]
+    },{
+        position: [106.542464,29.80479]
+    },{
+        position: [106.542248,29.804707]
+    },{
+        position: [106.541873,29.804592]
+    },{
+        position: [106.541589,29.804495]
+    },{
+        position: [106.541288,29.80442]
+    }];
+    
+    var index_1;
+    $(function(){
+    	var a=GetRequest();
+		index_1=a['Id'];//获取参数
+      	if(index_1==1){
+      		uuidTo=uuidTo1;
+      		markers=markers_1;
+      		map.setCenter([114.010287,22.627583]);
+      	}else if(index_1==2){
+      		uuidTo=uuidTo2;
+      		markers=markers_2;
+      		map.setCenter([106.541938,29.804777]);
+      	}
+      	
+		LdData(0);
+		setInterval(function(){
+	        LdData(0);
+	    },1*1000);
+	    
+		heartbeat();
+	    setInterval(function(){//心跳包一分钟执行一次
+	       heartbeat();
+	    }, 60 * 1000);
+	    
+	})
+ 	
+ 	//接收参数函数封装
+	function GetRequest() {
+	    var url = location.search; //获取url中"?"符后的字串
+	    var theRequest = new Object();
+	    if (url.indexOf("?") != -1) {
+	        var str = url.substr(1);
+	        strs = str.split("&");
+	        for (var i = 0; i < strs.length; i++) {
+	            theRequest[strs[i].split("=")[0]] = decodeURIComponent(strs[i].split("=")[1]);
+	        }
+	    }
+	    return theRequest;
+	}
+
+
+    //构建自定义信息窗体
+    function createInfoWindow(title, content) {
+        var info = document.createElement("div");
+        info.className = "info";
+
+        //可以通过下面的方式修改自定义窗体的宽高
+        info.style.width = "213px";
+        // 定义顶部标题
+        var top = document.createElement("div");
+        var titleD = document.createElement("div");
+        var closeX = document.createElement("img");
+        top.className = "info-top";
+        titleD.innerHTML = title;
+        closeX.src = "https://webapi.amap.com/images/close2.gif";
+        closeX.onclick = closeInfoWindow;
+
+        top.appendChild(titleD);
+        top.appendChild(closeX);
+        info.appendChild(top);
+
+        // 定义中部内容
+        var middle = document.createElement("div");
+        middle.className = "info-middle";
+        middle.style.backgroundColor = 'white';
+        middle.innerHTML = content;
+        info.appendChild(middle);
+
+        // 定义底部内容
+        var bottom = document.createElement("div");
+        bottom.className = "info-bottom";
+        bottom.style.position = 'relative';
+        bottom.style.top = '0px';
+        bottom.style.margin = '0 auto';
+        var sharp = document.createElement("img");
+        sharp.src = "https://webapi.amap.com/images/sharp.png";
+        bottom.appendChild(sharp);
+        info.appendChild(bottom);
+        return info;
+    }
+	 //关闭信息窗体
+    function closeInfoWindow() {
+        map.clearInfoWindow();
+    }
+    
+	
+	
+	//查询路灯数据
+	function LdData(id){
+	    var str="",fat="";
+	    if(index_1==1){
+      		fat='between 201 and 223';
+      	}else if(index_1==2){
+      		fat='between 226 and 240';
+      	}
+	    if(id==0){
+	
+	    }else{//根据ID查询单条改变的数据
+	        str=" and ID="+id;
+	    }
+	    
+	     $.ajax({
+			url: 'http://47.99.168.98:9003/API/IOTDataFill.asmx/Fill',
+	        data:{
+	            strTemplate:'{"b":$data.rows}',
+	            iTable:1,
+	            iRelateID:2,
+	            strSql:'select * from $TABLE where ID '+fat+' and TYPE=2'+str,
+	            strNameObject:'data',
+	        },
+	        dataType: 'json',
+	        type:"post",
+	        success: function (data) 
+	        {
+	            var aa = JSON.stringify(data.data);
+	            var bb = eval("("+aa+")");
+	            var cc = eval("("+bb+")");
+	            console.log(cc.b);
+	            if(id==0){
+	            	ldInfo=cc.b;
+	                showLdInfo();
+	                
+	            }else{
+	            	
+	                var n=num-1;
+	                ldInfo1="";
+	                ldInfo1=cc.b;
+	                //console.log("num:"+num+"--n:"+n+"--亮度值："+ldInfo1[0].FirDimming+"--电流："+ldInfo1[0].Current+"--功率："+ldInfo1[0].Power);
+	                //动态改变属性值
+	                $(".vol_"+n+"").html(ldInfo1[0].Voltage);
+	                $(".cur_"+n+"").html(ldInfo1[0].Current);
+	                $(".pow_"+n+"").html(ldInfo1[0].Power);
+	                //$(".fir_"+n+"").html(ldInfo1[0].FirDimming);
+	                //$("#myRange_"+n+"").val(ldInfo1[0].FirDimming);
+	            }	
+	            
+	        },
+	        error: function (data) 
+	        {
+	            //console.log("失败")
+	        }
+		});
+	}  
+	
+	//显示路灯信息
+	function showLdInfo(){
+		//给查出来的数据排序，与场景模型路灯位置对应
+		var k;
+		for(var i=0;i<ldInfo.length;i++){
+			if(index_1==1){
+				if(i%2==0){
+					k=i/2;
+				}else{
+					k=(i+19)/2;
+				}
+			}else if(index_1==2){
+				k=i;
+			}
+			//根据亮度值判断切换按钮的状态
+			if(ldInfo[i].FirDimming>0){
+				Flag[k]=true;
+			}else{
+				Flag[k]=false;
+			}
+			//根据亮度值初始化图片
+			if(ldInfo[i].FirDimming>=0&&ldInfo[i].FirDimming<10||ldInfo[i].FirDimming==""){
+				Img[k]=icon_0;
+			}else if(ldInfo[i].FirDimming>=10&&ldInfo[i].FirDimming<20){
+				Img[k]=icon_10;
+			}else if(ldInfo[i].FirDimming>=20&&ldInfo[i].FirDimming<30){
+				Img[k]=icon_20;
+			}else if(ldInfo[i].FirDimming>=30&&ldInfo[i].FirDimming<40){
+				Img[k]=icon_30;
+			}else if(ldInfo[i].FirDimming>=40&&ldInfo[i].FirDimming<50){
+				Img[k]=icon_40;
+			}else if(ldInfo[i].FirDimming>=50&&ldInfo[i].FirDimming<60){
+				Img[k]=icon_50;
+			}else if(ldInfo[i].FirDimming>=60&&ldInfo[i].FirDimming<70){
+				Img[k]=icon_60;
+			}else if(ldInfo[i].FirDimming>=70&&ldInfo[i].FirDimming<80){
+				Img[k]=icon_70;
+			}else if(ldInfo[i].FirDimming>=80&&ldInfo[i].FirDimming<90){
+				Img[k]=icon_80;
+			}else if(ldInfo[i].FirDimming>=90&&ldInfo[i].FirDimming<100){
+				Img[k]=icon_90;
+			}else{
+				Img[k]=icon_100;
+			}
+			   
+			if(index_1==1){
+				title[k]="洛丁展厅"+(i+1)+"号灯";
+			}else if(index_1==2){
+				title[k]="中科院展厅"+(i+1)+"号灯";
+			}
+			
+			uuid[k]=ldInfo[i].UUID;
+			Voltage[k]=ldInfo[i].Voltage;
+			Current[k]=ldInfo[i].Current;
+			Power[k]=ldInfo[i].Power;
+			if(ldInfo[i].FirDimming==""){
+				FirDimming[k]=0;
+			}else{
+				FirDimming[k]=ldInfo[i].FirDimming;
+			}
+		}
+		
+		//初始化各个marker图标
+		$.each(markers, function(i,marker) {
+			var icon1=Img[i];
+			marks[i]=null;
+	     	marker=new AMap.Marker({
+	            map: map,
+	            icon: icon1,
+	            position: [marker.position[0], marker.position[1]],
+	            offset: new AMap.Pixel(-12, -36)
+	        });
+	        marks[i]=marker;
+		});
+			
+		//存储信息框内容
+		for(var j=0;j<ldInfo.length;j++){
+			var content=[],ht;
+			//console.log(uuid[j]);
+			if(Flag[j]){
+				ht="<input type=\"checkbox\" checked id=\"inset_3\" onclick=\"changeLdState(this,"+j+",'"+uuid[j]+"')\"><label for=\"inset_3\" class=\"green\"></label>"
+			}else{
+				ht="<input type=\"checkbox\" id=\"inset_3\" onclick=\"changeLdState(this,"+j+",'"+uuid[j]+"')\"><label for=\"inset_3\" class=\"green\"></label>"
+			}
+		   	
+		   	content.push("开关："+ht);
+		    content.push("类型：  	 "+ldInfo[j].TYPENAME);
+		    content.push("电压：<span class=\"vol_"+j+"\">"+Voltage[j]+"</span>");
+		    content.push("电流：<span class=\"cur_"+j+"\">"+Current[j]+"</span>");
+		    content.push("功率：<span class=\"pow_"+j+"\">"+Power[j]+"</span>");
+		    content.push("主灯亮度值：<span class=\"fir_"+j+"\" style=\"width:23px;display:inline-block;\">"+FirDimming[j]+"</span><input type=\"range\" step=\"10\" class=\"range\" id=\"myRange_"+j+"\" value="+FirDimming[j]+" onchange=\"changeLight("+j+",'"+uuid[j]+"')\">");
+		    /*marks[j].setLabel({//label默认蓝框白底左上角显示，样式className为：amap-marker-label
+		        offset: new AMap.Pixel(20, 20),//修改label相对于maker的位置
+		        content: title[j]
+		    });*/
+		   	// 设置鼠标划过点标记显示的文字提示
+		   	marks[j].setTitle(title[j]);
+		   	//显示信息框
+		    showInfoWindow(marks[j],content,title[j]);
+		}  	
+	}
+	
+	//实例化信息窗体
+	function showInfoWindow(marker,content,title){
+        AMap.event.addListener(marker, 'click', function() {
+        	checkedname=title;
+        	checkedobj=marker;
+        	
+		    infoWindow=new AMap.InfoWindow({
+		        isCustom: true,  //使用自定义窗体
+		        content: createInfoWindow(title, content.join("<br/>")),
+		        offset: new AMap.Pixel(20, -58)
+		    });   
+		    
+            infoWindow.open(map, marker.getPosition());
+        });
+	}
+	
+	//开关某一个灯
+	function changeLdState(obj,j,uuid){
+		//console.log(uuid+"-------路灯："+uuid.substring(uuid.length-2,uuid.length)+"------------状态："+obj.checked);
+		var state1,subid1,ID1;
+		state1=obj.checked;
+        subid1=uuid;
+        num=uuid.substring(uuid.length-2,uuid.length);
+        
+        if(index_1==1){
+			ID1=203+parseInt(num);
+        }else if(index_1==2){
+        	ID1=225+parseInt(num);
+        }
+		
+		//改变图标
+		if(state1){
+			checkedobj.setIcon(icon_100);
+			$(".fir_"+j+"").html(100);
+			$("#myRange_"+j+"").val(100);
+		}else{
+			checkedobj.setIcon(icon_0);
+			$(".fir_"+j+"").html(0);
+			$("#myRange_"+j+"").val(0);
+		}
+		send(state1,subid1,1,ID1);
+	}
+	
+	//改变路灯光源亮度
+	function changeLight(j,uuid){
+		var state2,subid2,ID2;
+		state2=document.getElementById("myRange_"+j+"").value
+		subid2=uuid;
+		num=uuid.substring(uuid.length-2,uuid.length);
+		
+		if(index_1==1){
+			ID2=203+parseInt(num);
+        }else if(index_1==2){
+        	ID2=225+parseInt(num);
+        }
+        
+		//实时改变显示的值
+		$(".fir_"+j+"").html(state2);
+		//改变图标
+		if(state2>=0&&state2<10){
+			checkedobj.setIcon(icon_0);
+		}else if(state2>=10&&state2<20){
+			checkedobj.setIcon(icon_10);
+		}else if(state2>=20&&state2<30){
+			checkedobj.setIcon(icon_20);
+		}else if(state2>=30&&state2<40){
+			checkedobj.setIcon(icon_30);
+		}else if(state2>=40&&state2<50){
+			checkedobj.setIcon(icon_40);
+		}else if(state2>=50&&state2<60){
+			checkedobj.setIcon(icon_50);
+		}else if(state2>=60&&state2<70){
+			checkedobj.setIcon(icon_60);
+		}else if(state2>=70&&state2<80){
+			checkedobj.setIcon(icon_70);
+		}else if(state2>=80&&state2<90){
+			checkedobj.setIcon(icon_80);
+		}else if(state2>=90&&state2<100){
+			checkedobj.setIcon(icon_90);
+		}else{
+			checkedobj.setIcon(icon_100);
+		}
+		send(state2,subid2,0,ID2);
+	}
+
+	//----------------------------------------------------------------------
+	//心跳（一分钟执行一次）
+	function heartbeat(){
+	    $.Call.Ajax({
+	        url: 'http://47.99.177.66:9000/send',
+	        params:{
+	            version:0xe1,
+	            type:0<<4 | 2,//前面为命令，后面为网络类型
+	            key:iSessionKey,
+	            uuidFrom:uuidFrom,
+	            uuidTo:'',
+	            crc:0,
+	            data:'',
+	        },
+	        success: function (data) 
+	        {
+	            if(data.b){
+	                
+	                if(loginKey == null){
+	                    loginKey = parseInt(data.data.bKey);
+				        if(parseInt(data.data.iSessionKey) != 0){
+				        iSessionKey = parseInt(data.data.iSessionKey);
+				        }
+	                    
+	                    //poll();
+	                }else{
+	                    loginKey = parseInt(data.data.bKey);
+				        if(parseInt(data.data.iSessionKey) != 0){
+				        iSessionKey = parseInt(data.data.iSessionKey);
+				        }
+	                }
+	
+	                console.log(loginKey);
+	            }
+	            else{
+	            	layer.msg('心跳包发送失败，请稍后重试！');
+	                console.log(data.msg);
+	            }
+	            /*
+	            setTimeout(function(){
+	                    heartbeat();
+	            }, 60 * 1000);
+	            */
+	        },
+	        error: function (data) 
+	        {
+	            setTimeout(function(){
+	                heartbeat();
+	            }, 60 * 1000);
+	        }
+	    }); 
+	}
+	//发送指令开关灯
+	function send(state,subid,flag,id){
+	    var fir;//主灯亮度值
+	    if(flag==0){//根据滑块设值
+	        fir=state;
+	        if(state==0){
+	            $("#inset_3").prop("checked",false);
+	            
+	        }else{
+	            $("#inset_3").prop("checked",true);
+	        }
+	    }else{//根据切换按钮设值
+	        if(state==true){
+	            fir=100;
+	        }else{
+	            fir=0;
+	        }
+	    }
+	    console.log("id："+id+"-状态:"+state+"-亮度值："+fir+"-subid："+subid);
+	    //控灯指令
+	    var dataex1= stringToByte('{"Confirm":260,"dev":[{"SUBID":"'+subid+'","FirDimming":'+fir+'}]}#');
+	    //获取参数指令
+	    var dataex2=stringToByte('{"Confirm":276,"dev":[{"SUBID":"'+subid+'"}]}#');
+	    for(var i = 0; i < dataex1.length; i++){
+	        dataex1[i] ^= loginKey;
+	    }
+	    for(var i = 0; i < dataex2.length; i++){
+	        dataex2[i] ^= loginKey;
+	    }
+	
+	    $.Call.Ajax({
+	        url: 'http://47.99.177.66:9000/send',
+	        params:{
+	            version:0xe1,
+	            type:1<<4 | 6,//前面为命令，后面为网络类型
+	            key:iSessionKey,
+	            uuidFrom:uuidFrom,
+	            uuidTo:uuidTo,
+	            crc:0,
+	            data:Bytes2Str(dataex1),
+	        },
+	        success: function (data) 
+	        {
+	            if(data.b==false){
+	            	layer.msg(data.msg);
+	            }else{
+	            	poll();
+	            }
+	        },
+	        error: function (data) 
+	        {
+	        	layer.msg('指令发送失败或网络错误，请稍后重试！');
+	            //  setTimeout(function(){
+	            //       heartbeat();
+	            //  }, 10 * 1000);
+	        }
+	    }); 
+	   
+	   
+	   //获取参数
+	   $.Call.Ajax({
+	        url: 'http://47.99.177.66:9000/send',
+	        params:{
+	            version:0xe1,
+	            type:1<<4 | 6,//前面为命令，后面为网络类型
+	            key:iSessionKey,
+	            uuidFrom:uuidFrom,
+	            uuidTo:uuidTo,
+	            crc:0,
+	            data:Bytes2Str(dataex2),
+	        },
+	        success: function (data) 
+	        {
+	        	num1.push(id);
+	            
+	            if(num1.length==2){
+	            	num1[0]=num1[1];
+	            	num1.splice(1,1);
+	            	//console.log("长度："+num1.length+"----"+num1[0])
+	            	setInterval(function(){
+	            		LdData(num1[0]);
+	            	}, 1 * 1000);
+	            }else{
+	            	setInterval(function(){
+	            		LdData(num1[0]);
+	            	}, 1 * 1000);
+	            }
+	        },
+	        error: function (data) 
+	        {
+	        	layer.msg('指令发送失败或网络错误，请稍后重试！');
+	            //  setTimeout(function(){
+	            //       heartbeat();
+	            //  }, 10 * 1000);
+	        }
+	    });
+	}
+	
+	 //轮询
+	function poll()
+	{
+	 	$.Call.Ajax({
+		    url: 'http://47.99.177.66:9000/poll',
+		    params:{
+		        uuidFrom:uuidFrom
+		    },
+		    success: function (data) 
+		    {
+		        if(data.b == false){
+		            setTimeout(function(){
+		                poll();
+		            }, 5 * 1000);
+		        }else{
+		        	if(data.data!=null){
+		        		console.log("指令发送状态："+data.data[0].data)
+		            	var sendState=data.data[0].data;
+		            	if(sendState=="01"){
+		            		layer.msg("请求用户不在线，请稍后再试");
+		            	}else if(sendState=="02"){
+		            		layer.msg("内部错误，请稍后再试");
+		            	}else if(sendState=="00"){
+		            		console.log("接收数据成功");
+		            		layer.msg("数据更新中，请耐心等待。。。");
+		            	}
+		        	}else{
+		        		layer.msg("服务器暂无响应，请耐心等待。。。");
+		        	}
+		        	
+		        }
+		
+		        //处理数据缓存数据
+		        if(data.data != null)
+		        {
+		            for(var i = 0; i< data.data.length; i++)
+		            {
+		                switch((data.data[i].type & 0xf0) >> 4)
+		                {
+		                    case 1:
+		                    { 
+		                        var dataRet = Str2Bytes(data.data[i].data);
+		                        for(var j = 0; j < dataRet.length; j++){
+		                            dataRet[j] ^= loginKey;
+		                        }
+		                        console.log(byteToString(dataRet));
+		
+		                        //应答给客户发送成功
+		                        $.Call.Ajax({
+		                            url:'http://47.99.177.66:9000/send',
+		                            params:{
+		                                version:0xe1,
+		                                type:2<<4 | 6,//前面为命令，后面为网络类型
+		                                key:data.data[i].key,
+		                                uuidFrom:data.data[i].uuidTo,
+		                                uuidTo:data.data[i].uuidFrom,
+		                                crc:0,
+		                                data:'00'//00为成功，其他为不成功
+		                            },
+		                            success: function (data) 
+		                            {
+		
+		                            },
+		                            error: function (data) 
+		                            {
+		                                //  setTimeout(function(){
+		                                //       heartbeat();
+		                                //  }, 10 * 1000);
+		                            }
+		                        }); 
+		
+		                        break;
+		                    }
+		                    case 2:
+		                    {
+		                        break;
+		                    }
+		                    default:
+		                    {
+		                        break;
+		                    }
+		                }
+		            }
+		        }
+		    },
+		    error: function (data) 
+		    {
+		    	console.log("error");
+		        setTimeout(function(){
+		            poll();
+		        }, 5 * 1000);
+		    }
+		}); 
+	}
+	
+	
+	function stringToByte(str){
+        var bytes = new Array(); 
+        var len,c;
+        len = str.length;
+        for(var i = 0; i < len; i++){
+            c = str.charCodeAt(i);
+            if(c >= 0x010000 && c <= 0x10FFFF){
+	            bytes.push(((c >> 18) & 0x07) | 0xF0);
+	            bytes.push(((c >> 12) & 0x3F) | 0x80);
+	            bytes.push(((c >> 6) & 0x3F) | 0x80);
+	            bytes.push((c & 0x3F) | 0x80);
+            }else if(c >= 0x000800 && c <= 0x00FFFF){
+	            bytes.push(((c >> 12) & 0x0F) | 0xE0);
+	            bytes.push(((c >> 6) & 0x3F) | 0x80);
+	            bytes.push((c & 0x3F) | 0x80);
+            }else if(c >= 0x000080 && c <= 0x0007FF){
+	            bytes.push(((c >> 6) & 0x1F) | 0xC0);
+	            bytes.push((c & 0x3F) | 0x80);
+            }else{
+	            bytes.push(c & 0xFF);
+            }
+        }
+        return bytes;
+    }
+	 
+	function byteToString(arr) {
+		if(typeof arr === 'string') {
+			return arr;
+		}
+		var str = '',
+			_arr = arr;
+		for(var i = 0; i < _arr.length; i++) {
+			var one = _arr[i].toString(2),
+				v = one.match(/^1+?(?=0)/);
+			if(v && one.length == 8) {
+				var bytesLength = v[0].length;
+				var store = _arr[i].toString(2).slice(7 - bytesLength);
+				for(var st = 1; st < bytesLength; st++) {
+					store += _arr[st + i].toString(2).slice(2);
+				}
+				str += String.fromCharCode(parseInt(store, 2));
+				i += bytesLength - 1;
+			} else {
+				str += String.fromCharCode(_arr[i]);
+			}
+		}
+		return str;
+	}
+	
+	function Bytes2Str(arr)
+	{
+	    var str = "";
+	    for(var i=0; i<arr.length; i++)
+	    {
+	       var tmp = arr[i].toString(16);
+	       if(tmp.length == 1)
+	       {
+	           tmp = "0" + tmp;
+	       }
+	       str += tmp;
+	    }
+	    return str;
+	}
+	
+	function Str2Bytes(str)
+	{
+	    var pos = 0;
+	    var len = str.length;
+	    if(len %2 != 0)
+	    {
+	       return null; 
+	    }
+	    len /= 2;
+	    var hexA = new Array();
+	    for(var i=0; i<len; i++)
+	    {
+	       var s = str.substr(pos, 2);
+	       var v = parseInt(s, 16);
+	       hexA.push(v);
+	       pos += 2;
+	    }
+	    return hexA;
+	}
+	
+	var _keyStr = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=';
+	
+	$.Call = {
+		/**
+		 * 一、全局的 Ajax服务器请求URL地址
+		 */
+		url: 'http://' + this.window.location.host + '/API/',
+		
+		/**
+		 * 二、文件下载的URL地址
+		 * @param {Object} url
+		 */
+		downLoadFile: function (url) {
+	        try {
+	            var ifr = document.getElementById('e0c3bdac-489d-4943-a530-e3b29319c7c7');
+	            if (ifr) {
+	                ifr.src = url;
+	            } else {
+	                var elemIF = document.createElement('iframe');
+	                elemIF.id = 'e0c3bdac-489d-4943-a530-e3b29319c7c7';
+	                elemIF.src = url;
+	                elemIF.style.display = 'none';
+	                document.body.appendChild(elemIF);
+	            }
+	        } catch (e) {}
+	    },
+	    
+		/**
+		 * 三、Ajax服务器请求参数说明
+		 * @param {Object} url           Ajax访问的url
+		 * @param {Object} data          Post发送的参数
+		 * @param {Object} success       Ajax成功时运行函数
+		 * @param {Object} error         Ajax失败时运行函数
+		 * @param {Object} showLoading   是否显示加载动画函数
+		 */
+		Ajax: function(parmsObj) {
+			var Object = {
+				showLoading: parmsObj.showLoading,
+				type: parmsObj.type,
+				dataType: parmsObj.dataType,
+				url: parmsObj.url,
+				async: parmsObj.async,
+				params: parmsObj.params,
+				success: parmsObj.success,
+				error: parmsObj.error
+			}
+			
+			Object.showLoading = (Object.showLoading == null || Object.showLoading != '' || typeof(Object.showLoading) == 'undefined') ? true : Object.showLoading;
+			Object.type = (Object.type == null || Object.type == '' || typeof(Object.type) == 'undefined') ? 'POST' : Object.type;
+			Object.dataType = (Object.dataType == null || Object.dataType == '' || typeof(Object.dataType) == 'undefined') ? 'json' : Object.dataType;
+			Object.url = (Object.url == null || Object.url == '' || typeof(Object.url) == 'undefined') ? '' : Object.url;
+			Object.async = (Object.async == null || Object.async == '' || typeof(Object.async) == 'undefined') ? true : Object.async;
+			Object.params = (Object.params == null || Object.params == '' || typeof(Object.params) == 'undefined') ? {'date': new Date().getTime()} : Object.params;
+			
+			if (typeof(Object.success) == 'function') Object.success;
+			if (typeof(Object.error) == 'function') Object.error;
+			
+			$.ajax({
+	            type: Object.type,
+	            url: Object.url,
+	            data: Object.params,
+	            dataType: Object.dataType,
+	            async: Object.async,
+	            beforeSend: function(XMLHttpRequest) {
+	            	//显示加载动画
+	            	//if(Object.showLoading == true) Tui.showLoading();
+	            },
+	            complete: function(XMLHttpRequest, textStatus) {
+	            	//移除加载动画
+	            	//if(Object.showLoading == true) Tui.hideLoading();
+	            },
+	            success: function(data, textStatus) {
+	            	//响应成功回调
+	            	if (textStatus == 'success') Object.success(data); 
+	            },
+	            error: function(XMLHttpRequest, textStatus, errorThrown) {
+	            	//响应错误回调
+	            	Object.error(textStatus);
+	            }
+	        });
+		},
+		
+		/**
+	     * 四、Base64加密,解密-函数
+	     * @param {Object} input
+	     */
+	    //1.文本加密
+	    base64enCode: function(input) {
+			var output = '';
+			var chr1, chr2, chr3, enc1, enc2, enc3, enc4;
+			var i = 0;
+			input = _utf8_encode(input);
+			while(i < input.length) {
+				chr1 = input.charCodeAt(i++);
+				chr2 = input.charCodeAt(i++);
+				chr3 = input.charCodeAt(i++);
+				enc1 = chr1 >> 2;
+				enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
+				enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
+				enc4 = chr3 & 63;
+				if(isNaN(chr2)) {
+					enc3 = enc4 = 64;
+				} else if(isNaN(chr3)) {
+					enc4 = 64;
+				}
+				output = output +
+					_keyStr.charAt(enc1) + _keyStr.charAt(enc2) +
+					_keyStr.charAt(enc3) + _keyStr.charAt(enc4);
+			}
+			return output;
+		},
+		
+		//2.文本解密
+		base64deCode: function(input) {
+			var output = '';
+			var chr1, chr2, chr3;
+			var enc1, enc2, enc3, enc4;
+			var i = 0;
+			input = input.replace(/[^A-Za-z0-9\+\/\=]/g, '');
+			while(i < input.length) {
+				enc1 = _keyStr.indexOf(input.charAt(i++));
+				enc2 = _keyStr.indexOf(input.charAt(i++));
+				enc3 = _keyStr.indexOf(input.charAt(i++));
+				enc4 = _keyStr.indexOf(input.charAt(i++));
+				chr1 = (enc1 << 2) | (enc2 >> 4);
+				chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
+				chr3 = ((enc3 & 3) << 6) | enc4;
+				output = output + String.fromCharCode(chr1);
+				if(enc3 != 64) {
+					output = output + String.fromCharCode(chr2);
+				}
+				if(enc4 != 64) {
+					output = output + String.fromCharCode(chr3);
+				}
+			}
+		//	output = _utf8_decode(output);
+			return output;
+		}
+	};
+	
+	_utf8_encode = function (string) {
+	    string = string.replace(/\r\n/g, "\n");
+	    var utftext = "";
+	    for (var n = 0; n < string.length; n++) {
+	        var c = string.charCodeAt(n);
+	        if (c < 128) {
+	            utftext += String.fromCharCode(c);
+	        } else if ((c > 127) && (c < 2048)) {
+	            utftext += String.fromCharCode((c >> 6) | 192);
+	            utftext += String.fromCharCode((c & 63) | 128);
+	        } else {
+	            utftext += String.fromCharCode((c >> 12) | 224);
+	            utftext += String.fromCharCode(((c >> 6) & 63) | 128);
+	            utftext += String.fromCharCode((c & 63) | 128);
+	        }
+	
+	    }
+	    return utftext;
+	}
+	
+	// private method for UTF-8 decoding
+	_utf8_decode = function (utftext) {
+	    var string = "";
+	    var i = 0;
+	    var c = c1 = c2 = 0;
+	    while (i < utftext.length) {
+	        c = utftext.charCodeAt(i);
+	        if (c < 128) {
+	            string += String.fromCharCode(c);
+	            i++;
+	        } else if ((c > 191) && (c < 224)) {
+	            c2 = utftext.charCodeAt(i + 1);
+	            string += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
+	            i += 2;
+	        } else {
+	            c2 = utftext.charCodeAt(i + 1);
+	            c3 = utftext.charCodeAt(i + 2);
+	            string += String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
+	            i += 3;
+	        }
+	    }
+	    return string;
+	}
+	</script>
+</body>
+</html>
